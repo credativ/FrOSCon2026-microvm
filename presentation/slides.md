@@ -105,7 +105,7 @@ Genau dieser Lastfall – tausende winzige, kurzlebige, isolierte Starts – hat
 
 **Eigenschaften von MicroVMs:**
 - **VM-Isolation:** Eigener Linux-Kernel via KVM (harte Sicherheitsgrenze)
-- **Schneller Start:** Bootzeiten von ~150–200 ms
+- **Schneller Start:** Bootzeiten im Bereich weniger hundert Millisekunden
 - **Reduzierte Angriffsfläche:** Keine Emulation von Floppy, IDE, VGA, PCI oder USB – historische Quellen von QEMU-Sicherheitslücken (CVEs)
 - **Schlanker Footprint:** Nur minimale VirtIO-MMIO-Geräte am Systembus
 
@@ -257,6 +257,16 @@ Mehrere Plattform-Teams, die mit Firecracker gestartet sind, z.B. Hocus [1](http
 Der Gewinn gegenüber dem Container: microVM tauscht „geteilter Kernel" gegen eine echte KVM-Grenze — genau darum setzen FaaS-Plattformen microVMs statt Container ein.
 </div>
 
+<!--
+seccomp kurz erklären (erstes Vorkommen):
+seccomp = "secure computing mode", ein Linux-Kernel-Feature. Man legt pro Prozess fest,
+welche Syscalls er überhaupt an den Kernel stellen darf; alles andere wird geblockt
+(Prozess bekommt Fehler oder wird gekillt). Damit schrumpft die Kernel-Angriffsfläche:
+Selbst wenn der VMM übernommen wird, kann der Angreifer nur noch die wenigen erlaubten
+Syscalls nutzen. QEMU schaltet das per `-sandbox on` ein; Firecracker bringt einen
+sehr engen Filter (~50 erlaubte Syscalls) als Default mit.
+-->
+
 ---
 
 ## Wie Proxmox eine VM startet
@@ -375,7 +385,7 @@ Proxmox übersetzt die deklarative Konfigurationsdatei via Perl in den exakten Q
 +    return 'microvm' if $machine_type =~ m/^microvm/;
 ```
 
-**Ergebnis:** Proxmox akzeptiert `machine: microvm` in CLI, GUI und REST-API und hängt automatisch `+pve0` zur Revisionskontrolle an.
+**Ergebnis:** Proxmox akzeptiert `machine: microvm` in CLI, GUI und REST-API.
 
 ---
 
@@ -424,6 +434,73 @@ Sicheres Testen von PVE-Patches ohne Eingriff in Produktivknoten:
 
 ---
 
+## Benchmarks: Methodik
+
+### Messaufbau (in zwei Akten):
+- **Viele Läufe, identische Hardware:** jede Variante mehrfach (10×) auf **demselben Host** gemessen, angegeben ist der **Median (P50)** – Ausreißer fallen so raus.
+- **Identisches RootFS:** Alpine Linux 3.21 minirootfs (ext4), für alle Läufe gleich.
+- **Readiness-Signal:** Zeit bis zum seriellen Marker `+++BENCHREADY+++` aus dem Gast-Init.
+- **Es geht um Verhältnisse:** Absolutwerte hängen an der Host-Hardware — entscheidend ist das Verhältnis zwischen den Varianten.
+
+---
+
+## Erster Anlauf: microVM mit dem Distro-Kernel
+
+<div class="cols">
+<div>
+
+- Maschinentyp **microvm**: kein PCI, kein SeaBIOS, virtio-mmio, Direkt-Boot – im Prinzip Firecracker-Bauart in Proxmox.
+- Gebootet mit dem Kernel, den Proxmox/Debian ohnehin mitbringt.
+
+</div>
+<div>
+
+<div class="hint">
+Ergebnis: <strong>~3,25 s</strong> bis Userspace — und das, obwohl der Maschinentyp schon der schlanke <code>microvm</code> ist.
+</div>
+
+</div>
+</div>
+
+---
+
+<!-- _class: segue -->
+
+## Warum zur Hölle ist das immer noch so lahm?
+
+Der ganze PC-Ballast ist weg – kein PCI, kein BIOS, minimale Geräte. Firecracker verspricht Millisekunden. Und wir stehen bei **über drei Sekunden**.
+
+Der VMM kann es also nicht allein sein. Was bremst?
+
+---
+
+## Auflösung: der Kernel ist der Hebel
+
+<div class="cols">
+<div><img src="charts/kernel.svg" alt="Kernel-Hebel: Slim- vs. Distro-Kernel" style="width:100%"></div>
+<div>
+
+### Dieselbe microVM – nur der Gast-Kernel getauscht:
+- **Distro-Kernel:** ~3.250 ms
+- **Slim-Kernel:** ~484 ms → **×6,7 schneller**
+
+Der Distro-Kernel probt beim Boot hunderte Treiber/Module, fährt udev und ein Initramfs hoch. Der Slim-Kernel hat alles fest eingebaut, kein Initramfs – er wacht „fertig" auf.
+
+</div>
+</div>
+
+---
+
+## Und der VMM? Gleicher Kernel, nur VMM variiert
+
+<img src="charts/startup.svg" alt="Cold-Start: QEMU full vs. microVM vs. Firecracker" style="display:block;margin:0 auto;max-height:380px">
+
+<div class="hint">
+Mit dem schlanken Kernel liegen alle im selben Bereich (QEMU full 874 ms · microVM 484 ms · Firecracker 320 ms). Der VMM bringt nur noch ~Faktor 2–3 – der berühmte „10–100×"-Vorsprung war zum größten Teil der Kernel.
+</div>
+
+---
+
 ## Woher kommen Slim-Kernel & RootFS?
 
 <div class="cols">
@@ -446,49 +523,6 @@ Sicheres Testen von PVE-Patches ohne Eingriff in Produktivknoten:
 
 <div class="hint">
 Heute landen Kernel & RootFS noch manuell auf dem Node — First-Class-Image-Handling in PVE ist einer der offenen Punkte.
-</div>
-
----
-
-## Benchmarks: Startup-Zeiten & Ressourcenbedarf
-
-### Messaufbau & Methodik (reiner VMM-Vergleich):
-- **Identischer Gast-Kernel:** selbst gebauter Slim-Kernel (~7 MB bzImage, ACPI=y, keine Module).
-- **Identisches RootFS:** Alpine Linux 3.21 minirootfs (ext4).
-- **Readiness-Signal:** Zeit bis zum seriellen Marker `+++BENCHREADY+++` aus dem Gast-Init.
-- **Hinweis:** Die absoluten Zeiten variieren je nach Host-Hardware — relevant ist das relative Verhältnis der Architekturen zueinander.
-
----
-
-## Cold-Start: Gleicher Kernel, nur VMM variiert
-
-<img src="charts/startup.svg" alt="Cold-Start: QEMU full vs. microVM vs. Firecracker" style="display:block;margin:0 auto;max-height:420px">
-
-<div class="hint">
-Mit demselben schlanken Kernel schmilzt der oft zitierte „Faktor 100" zusammen: QEMU microvm startet in rund <strong>180 ms</strong>.
-</div>
-
----
-
-## Der Kernel-Einfluss: Slim-Kernel vs. Distro-Kernel
-
-<div class="cols">
-<div><img src="charts/kernel.svg" alt="Kernel-Hebel: Slim vs Fat" style="width:100%"></div>
-<div>
-
-### Dieselbe MicroVM – nur Kernel getauscht:
-
-- **Schlanker Kernel (Slim):** ~180 ms
-- **Standard-Distro-Kernel (Fat):** ~1.300 ms
-
-<div class="hint">
-<strong>Erkenntnis:</strong><br>
-Der VMM-Wechsel (q35 → microvm) spart ~1.000 ms.<br>
-Der <strong>Kernel-Wechsel spart weitere ~1.100 ms</strong>.<br><br>
-Das größte Optimierungspotenzial liegt im Gast-Kernel.
-</div>
-
-</div>
 </div>
 
 ---
@@ -523,34 +557,30 @@ Das größte Optimierungspotenzial liegt im Gast-Kernel.
 <img src="charts/concurrent.svg" alt="Concurrent Boot Skalierung" style="display:block;margin:0 auto;max-height:420px">
 
 <div class="hint">
-QEMU microvm skaliert beim parallelen Start bis 32 gleichzeitige VMs nahe an Firecracker.
+Beide skalieren beim parallelen Start nahezu linear. Bei 32 gleichzeitigen VMs: Firecracker ≈1,3 s (41 ms/VM), QEMU microVM ≈1,9 s (60 ms/VM)
 </div>
 
 ---
 
 ## Kostet die Proxmox-Schicht etwas?
 
-Die ehrliche Antwort braucht **keinen Benchmark** – sie steht im `qm showcmd`.
+Zwei getrennte Fragen: der **Gast-Boot** selbst und der **Vorlauf** davor.
 
 <div class="cols">
 <div>
 
-### Was identisch ist
-- `qm start` und rohes `qemu-system-x86_64 -M microvm` erzeugen **dieselbe QEMU-Kommandozeile**.
-- Damit ist der Gast-Boot per Definition der gleiche QEMU-Aufruf – Proxmox schiebt sich nicht in den VM-Start.
+### Der Gast-Boot ist identisch
+- `qm start` und rohes `qemu-system-x86_64 -M microvm` erzeugen **dieselbe QEMU-Kommandozeile** (`qm showcmd`).
+- Sobald QEMU läuft, ist die Boot-Phase also messbar die gleiche.
 
 </div>
 <div>
 
-### Was PVE hinzufügt
-- Ein einmaliger Management-Pfad davor: `pvedaemon`/`qm`, Config-Parsing, tap-Setup.
-- Läuft auf dem Host, einmal pro VM-Start – **nicht im Gast-Boot**.
+### Aber der Vorlauf ist nicht gratis
+- API und GUI-Klick sind **asynchron**: sie legen einen Task an und kehren sofort zurück – die Arbeit macht ein `pvedaemon`-Worker.
+- Davor: Task-Queue, Config-Parsing, Storage aktivieren, tap-/Hook-Setup. Das kostet Zeit **vor** dem QEMU-Exec.
 
 </div>
-</div>
-
-<div class="hint">
-Kernaussage: Der Proxmox-Komfort (Config, API, GUI, Storage, Netz) sitzt <em>vor</em> dem VM-Start, nicht darin. Das zeigt schon der identische <code>qm showcmd</code> – ohne dass man eine Zahl messen muss.
 </div>
 
 ---
@@ -558,15 +588,7 @@ Kernaussage: Der Proxmox-Komfort (Config, API, GUI, Storage, Netz) sitzt <em>vor
 ## Live-Demo: MicroVM in Proxmox VE
 
 <div class="cols">
-<div>
 
-### Ablauf der Demo:
-1. Proxmox Web-UI aufrufen (`https://localhost:8006`)
-2. **Create VM Wizard** -> Tab *System* -> Machine: `microvm`
-3. Direct Kernel Boot konfigurieren (`vmlinuz-slim` + `rootfs`)
-4. Starten & Boot-Log in `xterm.js` / Serial Console betrachten
-
-</div>
 <div>
 
 ### VM-Konfiguration (`/etc/pve/qemu-server/100.conf`):
@@ -575,13 +597,14 @@ name: microvm-demo
 machine: microvm
 cores: 2
 memory: 512
-kernel: /var/lib/vz/template/qemu/vmlinuz-slim
-args: console=ttyS0 root=/dev/vda rw
-virtio0: local-lvm:vm-100-disk-0,size=4G
-net0: virtio=BC:24:11:AA:BB:CC,bridge=vmbr0
+args: -kernel /var/lib/vz/template/qemu/vmlinuz-slim
+  -append "console=ttyS0 root=/dev/vda rw"
+virtio0: local:100/vm-100-disk-0.raw,size=64M
 serial0: socket
 vga: serial0
 ```
+
+<p class="fn">Direct-Boot läuft über <code>args:</code> (<code>-kernel/-initrd/-append</code>) – noch kein First-Class-Key. Fat-Variante: zusätzlich <code>-initrd …/initrd-fat.img</code>.</p>
 
 </div>
 </div>
@@ -591,37 +614,48 @@ vga: serial0
 ## QEMU-Aufruf: `qm showcmd` im Detail
 
 ```bash
-# qm showcmd 101 (Gepatchtes Proxmox VE)
-/usr/bin/kvm -id 101 -name microvm-demo -daemonize -nodefaults -nographic \
+# qm showcmd 101   (gepatchtes PVE · microvm-fat · Management-/QMP-Args gekürzt)
+/usr/bin/kvm -id 101 -name microvm-fat -nodefaults -nographic \
   -machine 'smm=off,type=microvm+pve0' \
-  -cpu host -smp 2,sockets=1,cores=2 -m 512 \
-  -kernel /var/lib/vz/template/qemu/vmlinuz-slim \
-  -append 'console=ttyS0 root=/dev/vda rw init=/init quiet' \
-  -chardev socket,id=serial0,path=/var/run/qemu-server/101.serial0,server=on,wait=off \
+  -cpu kvm64,enforce,+kvm_pv_eoi,+kvm_pv_unhalt,+lahf_lm,+sep \
+  -smp '2,sockets=1,cores=2,maxcpus=2' -m 512 \
+  -chardev 'socket,id=serial0,path=/var/run/qemu-server/101.serial0,server=on,wait=off' \
   -device 'isa-serial,chardev=serial0' \
-  -blockdev '{"driver":"raw","file":{"aio":"io_uring","filename":".../vm-101-disk-0.raw"},"node-name":"drive-virtio0"}' \
-  -device 'virtio-blk-device,drive=drive-virtio0,id=virtio0' \
-  -netdev 'type=tap,id=net0,ifname=tap101i0,script=/var/lib/qemu-server/pve-bridge,...' \
-  -device 'virtio-net-device,mac=bc:24:11:aa:bb:cc,netdev=net0,id=net0' \
-  -device 'virtio-balloon-device,id=balloon0,free-page-reporting=on'
+  -blockdev '{"driver":"throttle",…,"file":{"driver":"raw","file":{"driver":"file",
+      "filename":"/var/lib/vz/images/101/vm-101-disk-0.raw"}},"node-name":"drive-virtio0"}' \
+  -device 'virtio-blk-device,drive=drive-virtio0,id=virtio0,write-cache=on' \
+  -device 'virtio-balloon-device,id=balloon0,free-page-reporting=on' \
+  -kernel /var/lib/vz/template/qemu/vmlinuz-fat \
+  -initrd /var/lib/vz/template/qemu/initrd-fat.img \
+  -append 'console=ttyS0 root=/dev/vda rw init=/init quiet'
 ```
 
 <div class="cols">
 <div>
 
-- **`microvm+pve0`:** Kein PCI-Root, kein ACPI S3/S4
-- **`virtio-*-device`:** VirtIO-MMIO für Disk, Net & Balloon
-- **`isa-serial`:** Serielle Konsole über UNIX-Socket
+- **`microvm+pve0`:** Maschinentyp inkl. PVE-Revision, `smm=off`
+- **`virtio-*-device`:** VirtIO-MMIO für Disk & Balloon (Netz optional)
+- **`isa-serial`:** serielle Konsole über UNIX-Socket
 
 </div>
 <div>
 
-- **Keine PCI-Bridges:** `pci.0` & Bridges übersprungen
-- **Kein USB/VGA:** Keine Controller initialisiert
-- **Direct Kernel Boot:** Überspringt SeaBIOS/OVMF
+- **Keine PCI-Bridges:** `pci.0` & Root-Ports übersprungen
+- **Kein USB/VGA:** keine Controller initialisiert
+- **Direct Boot:** `-kernel/-initrd/-append`, kein SeaBIOS/OVMF
 
 </div>
 </div>
+
+<!--
+smm=off kurz erklären:
+SMM = System Management Mode, ein spezieller, hochprivilegierter x86-CPU-Modus (quasi
+"Ring -2"), in den die CPU per SMI springt. Firmware (SeaBIOS/OVMF) nutzt SMM z. B. für
+Power-Management und Secure-Boot-Enforcement. Eine microVM hat gar keine solche Firmware
+und bootet den Kernel direkt – SMM wird also nicht gebraucht und abgeschaltet (smm=off).
+Nebeneffekt: eine Komplexitäts-/Angriffsflächen-Quelle weniger. Bei q35 mit OVMF/Secure
+Boot ist SMM dagegen an.
+-->
 
 ---
 
@@ -662,7 +696,7 @@ Wann nimmt man in der Praxis was?
 | Kriterium | LXC Container | QEMU microVM (PVE) | Volle KVM-VM (`q35`) |
 | :--- | :--- | :--- | :--- |
 | **Isolation** | Geteilter Kernel (weich) | **Eigener Kernel (hart)** | **Eigener Kernel (hart)** |
-| **Bootzeit** | < 100 ms | **~180 ms** | 5 – 30 s |
+| **Bootzeit** | < 100 ms | **~480 ms** (Slim-Kernel) | 5 – 30 s |
 | **VMM Memory RSS** | 0 MB | **~137 MB** | ~141 MB |
 | **Live-Migration** | Nein | **Nein / eingeschränkt** | **Ja (vollständig)** |
 | **Hardware-Passthrough**| Eingeschränkt | **Nein (kein PCI)** | **Ja (PCIe, GPU, USB)** |
@@ -678,7 +712,7 @@ Wann nimmt man in der Praxis was?
 - **Kein PCI-Passthrough:** Für dedizierte GPUs oder PCIe-NICs bleibt nur `q35`.
 
 <div class="hint">
-<strong>Stärke bei kurzlebigen Workloads:</strong> MicroVMs passen zu Jobs, die nach Sekunden oder Minuten wieder verworfen werden (CI/CD, Tests, Microservices).
+<strong>Stärke bei kurzlebigen Workloads:</strong> MicroVMs passen zu Jobs, die nach Sekunden oder Minuten wieder verworfen werden (CI/CD, Tests, Microservices, Functions).
 </div>
 
 ---
@@ -695,7 +729,7 @@ Wann nimmt man in der Praxis was?
 
 ## Zusammenfassung & Fazit
 
-1. **Isolation & Performance:** MicroVMs verbinden KVM-Sicherheit mit Startzeiten von unter 200 ms.
+1. **Isolation & Performance:** MicroVMs verbinden KVM-Sicherheit mit Startzeiten im Bereich weniger hundert Millisekunden.
 2. **Der Kernel ist der Hebel:** Ein generischer Distro-Kernel mit Modulen und Initramfs braucht Sekunden für Udev & Hardware-Scan. Erst ein schlanker All-Built-in-Kernel (~7 MB `bzImage`) ohne Initramfs bringt das Tempo.
 3. **VirtIO-MMIO als Paradigma:** Verzicht auf PCI spart Initialisierungszeit und Speicher, limitiert aber auf statische, nicht-hotplugfähige Geräte.
 4. **Machbarkeit bewiesen:** Ein minimal-invasiver Patch ohne Seiteneffekte für bestehende VMs beweist, dass Proxmox VE MicroVMs nativ unterstützen kann.
