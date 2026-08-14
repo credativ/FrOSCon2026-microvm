@@ -36,6 +36,7 @@ FrOSCon 2026 · Hochschule Bonn-Rhein-Sieg · Alexander Wirt
 
 - **Motivation:** Die Lücke zwischen Container (LXC) und voller VM
 - **Isolationsspektrum & Kandidaten:** QEMU (q35), QEMU microVM, Firecracker
+- **Sicherheit:** Angriffsfläche & Isolationsgrenze gegenüber Containern
 - **Wie Proxmox VMs startet:** `pve-qemu-server`, `config_to_command` & PCI-Topologie
 - **Technische Hürden in PVE:** PCI-Topologie, SeaBIOS & Legacy-Geräte
 - **Der Patch:** Minimal-invasive Integration in Perl-Backend & ExtJS-GUI
@@ -170,6 +171,33 @@ FrOSCon 2026 · Hochschule Bonn-Rhein-Sieg · Alexander Wirt
 
 ---
 
+## Sicherheitsgrenze: microVM vs. Container
+
+<div class="cols">
+<div>
+
+### Die harte Grenze (KVM)
+- Eigener Gast-Kernel statt geteiltem Host-Kernel (LXC): ein Kernel-Bug bleibt im Gast, nicht auf dem PVE-Host.
+- Angriffsfläche = wenige VirtIO-MMIO-Geräte statt des vollen PC-Modells.
+- Die bekannten QEMU-Escapes liefen fast alle über emulierte Legacy-Hardware (Floppy/„VENOM", USB, NICs) – genau die fehlt hier.
+
+</div>
+<div>
+
+### Zusätzliche Härtung
+- **QEMU:** seccomp via `-sandbox on`, unter PVE zusätzlich AppArmor/sVirt je VM.
+- **Firecracker:** Jailer (seccomp, Namespaces, cgroups, chroot) plus Rust als speichersichere Sprache.
+- microVM erbt QEMUs Härtung; die kleinere Gerätemenge verkleinert die Fläche zusätzlich.
+
+</div>
+</div>
+
+<div class="hint">
+Der Gewinn gegenüber dem Container: microVM tauscht „geteilter Kernel" gegen eine echte KVM-Grenze — genau darum setzen FaaS-Plattformen microVMs statt Container ein.
+</div>
+
+---
+
 ## Wie Proxmox eine VM startet
 
 ```
@@ -229,7 +257,7 @@ Proxmox übersetzt die deklarative Konfigurationsdatei via Perl in den exakten Q
 ### Was `microvm` erfordert:
 - **Kein PCI-Bus** (Geräte via `virtio-mmio`)
 - **Kein SeaBIOS** (Direct Kernel Boot)
-- **Keine ACPI-Legacy-Geräte**
+- **Kein klassisches ACPI** (PIIX4/ICH9), nur minimales `acpi-ged`
 - **Reine serielle Konsole** (`ttyS0` / `hvc0`)
 - Minimaler Device-Tree
 
@@ -335,6 +363,32 @@ Sicheres Testen von PVE-Patches ohne Eingriff in Produktivknoten:
 
 ---
 
+## Woher kommen Slim-Kernel & RootFS?
+
+<div class="cols">
+<div>
+
+### Slim-Kernel
+- Selbst gebaut (`build-slim-kernel.sh`): Firecracker-CI-Config + `CONFIG_ACPI=y`, **alles fest eingebaut**, keine Module, kein Initramfs.
+- Ergebnis: ~7 MB `bzImage` → `/var/lib/vz/template/qemu/vmlinuz-slim`.
+- Direkt-Boot mit `root=/dev/vda` – kein Initramfs nötig, weil die VirtIO-Treiber im Kernel sitzen.
+
+</div>
+<div>
+
+### RootFS
+- Alpine 3.21 minirootfs → ext4-Image, als `virtio0`-Disk eingehängt.
+- Für alle Messungen identisch (fairer Vergleich).
+
+</div>
+</div>
+
+<div class="hint">
+Heute landen Kernel & RootFS noch manuell auf dem Node — First-Class-Image-Handling in PVE ist einer der offenen Punkte.
+</div>
+
+---
+
 ## Benchmarks: Startup-Zeiten & Ressourcenbedarf
 
 ### Messaufbau & Methodik (reiner VMM-Vergleich):
@@ -409,6 +463,33 @@ Das größte Optimierungspotenzial liegt im Gast-Kernel.
 
 <div class="hint">
 QEMU microvm skaliert beim parallelen Start bis 32 gleichzeitige VMs nahe an Firecracker.
+</div>
+
+---
+
+## Kostet die Proxmox-Schicht etwas?
+
+Vergleich: **`qm start` (gepatchtes PVE)** gegen **rohes `qemu-system-x86_64 -M microvm`**.
+
+<div class="cols">
+<div>
+
+### Was identisch ist
+- Die erzeugte QEMU-Kommandozeile ist dieselbe (siehe `qm showcmd`).
+- Der **Gast-Boot selbst ist gleich schnell** – Proxmox ändert am VM-Start nichts.
+
+</div>
+<div>
+
+### Was PVE hinzufügt
+- Einmaliger Management-Pfad: `pvedaemon`/`qm`, Config-Parsing, tap-Setup.
+- Liegt im **Millisekundenbereich**, fällt einmal pro VM-Start an – nicht im Gast.
+
+</div>
+</div>
+
+<div class="hint">
+Kernaussage: Der Proxmox-Komfort (Config, API, GUI, Storage, Netz) kostet praktisch keine Boot-Zeit. <em>Chart aus dem <code>pve_microvm</code>-Testbed-Lauf folgt.</em>
 </div>
 
 ---
@@ -554,7 +635,7 @@ Wann nimmt man in der Praxis was?
 ## Zusammenfassung & Fazit
 
 1. **Isolation & Performance:** MicroVMs verbinden KVM-Sicherheit mit Startzeiten von unter 200 ms.
-2. **Der Kernel ist der Hebel:** Ein 60-MB-Distro-Kernel braucht Sekunden für Udev & Hardware-Scan. Erst ein schlanker All-Built-in-Kernel (<10 MB) ohne Initramfs bringt das Tempo.
+2. **Der Kernel ist der Hebel:** Ein generischer Distro-Kernel mit Modulen und Initramfs braucht Sekunden für Udev & Hardware-Scan. Erst ein schlanker All-Built-in-Kernel (~7 MB `bzImage`) ohne Initramfs bringt das Tempo.
 3. **VirtIO-MMIO als Paradigma:** Verzicht auf PCI spart Initialisierungszeit und Speicher, limitiert aber auf statische, nicht-hotplugfähige Geräte.
 4. **Machbarkeit bewiesen:** Ein minimal-invasiver Patch ohne Seiteneffekte für bestehende VMs beweist, dass Proxmox VE MicroVMs nativ unterstützen kann.
 
