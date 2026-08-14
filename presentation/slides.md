@@ -224,11 +224,11 @@ Unser Patch ergänzt genau einen weiteren Basistyp: microvm.
 </div>
 
 <div class="hint">
-<strong>Praxiserfahrung:</strong> Mehrere Plattform-Teams, die mit Firecracker gestartet sind (z. B. Hocus<sup>[1]</sup>), wechselten für flexiblere Workloads zu QEMU/MicroVMs zurück – weil Firecrackers bewusste Reduktion außerhalb von FaaS schnell zur harten Grenze wird.
+<strong>Praxiserfahrung:</strong> Mehrere Plattform-Teams, die mit Firecracker gestartet sind (z. B. Hocus<sup>1</sup>), wechselten für flexiblere Workloads zu QEMU/MicroVMs zurück – weil Firecrackers bewusste Reduktion außerhalb von FaaS schnell zur harten Grenze wird.
 </div>
 
 <div class="footnote">
-<sup>[1]</sup> Hocus: <em>„Why We Migrated from Firecracker to QEMU“</em> – <a href="https://hocus.dev/blog/qemu-vs-firecracker/">https://hocus.dev/blog/qemu-vs-firecracker/</a>
+<sup>1</sup> Hocus: <em>„Why We Migrated from Firecracker to QEMU“</em> – <a href="https://hocus.dev/blog/qemu-vs-firecracker/">https://hocus.dev/blog/qemu-vs-firecracker/</a>
 </div>
 
 ---
