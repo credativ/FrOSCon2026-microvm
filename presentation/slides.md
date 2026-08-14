@@ -606,7 +606,7 @@ serial0: socket
 vga: serial0
 ```
 
-<p class="fn">Direct-Boot läuft über <code>args:</code> (<code>-kernel/-initrd/-append</code>) – noch kein First-Class-Key. Fat-Variante: zusätzlich <code>-initrd …/initrd-fat.img</code>.</p>
+<p class="note">Direct-Boot läuft über <code>args:</code> (<code>-kernel/-initrd/-append</code>) – noch kein First-Class-Key. Fat-Variante: zusätzlich <code>-initrd …/initrd-fat.img</code>.</p>
 
 </div>
 </div>

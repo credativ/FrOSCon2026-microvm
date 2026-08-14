@@ -283,9 +283,10 @@ section :not(pre) > code {
 }
 
 /* ===== Footnotes ===== */
+/* sitzt ÜBER der regulären Fußzeile (section footer @ bottom:18px), nicht darauf */
 .footnote, .fn {
   position: absolute;
-  bottom: 20px;
+  bottom: 52px;
   left: 60px;
   right: 180px;
   font-size: 0.58em;
