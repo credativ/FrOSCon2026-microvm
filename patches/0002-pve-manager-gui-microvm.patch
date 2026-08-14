@@ -1,0 +1,51 @@
+From: FrOSCon 2026 MicroVM Project <froscon@example.com>
+Date: Fri, 24 Jul 2026 20:40:00 +0200
+Subject: [PATCH] pve-manager: Add QEMU microvm machine type selection to Web GUI
+
+This patch adds 'microvm' to the machine type dropdown in the Proxmox VE Web UI
+and prevents MachineEdit from resetting microvm back to __default__.
+
+---
+ www/manager6/form/QemuMachineSelector.js | 1 +
+ www/manager6/qemu/Architecture.js        | 2 +-
+ www/manager6/qemu/MachineEdit.js         | 2 +-
+ 3 files changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/www/manager6/form/QemuMachineSelector.js b/www/manager6/form/QemuMachineSelector.js
+index fe1c463a..4c4ae3fb 100644
+--- a/www/manager6/form/QemuMachineSelector.js
++++ b/www/manager6/form/QemuMachineSelector.js
+@@ -6,6 +6,7 @@ Ext.define('PVE.form.QemuMachineSelector', {
+     comboItems: [
+         ['__default__', PVE.Utils.render_qemu_machine('')],
+         ['q35', 'q35'],
++        ['microvm', 'microvm'],
+     ],
+
+     allowedValuesPerCategory: PVE.qemu.Architecture.allowedMachines,
+diff --git a/www/manager6/qemu/Architecture.js b/www/manager6/qemu/Architecture.js
+index eb9408bf..856bbd0d 100644
+--- a/www/manager6/qemu/Architecture.js
++++ b/www/manager6/qemu/Architecture.js
+@@ -53,7 +53,7 @@ Ext.define('PVE.qemu.Architecture', {
+     },
+
+     allowedMachines: {
+-        x86_64: ['__default__', 'q35'], // __default__ is i440fx
++        x86_64: ['__default__', 'q35', 'microvm'], // __default__ is i440fx
+         aarch64: ['__default__'], // __default__ is virt
+     },
+
+diff --git a/www/manager6/qemu/MachineEdit.js b/www/manager6/qemu/MachineEdit.js
+index 9260ee1f..a2872390 100644
+--- a/www/manager6/qemu/MachineEdit.js
++++ b/www/manager6/qemu/MachineEdit.js
+@@ -114,7 +114,7 @@ Ext.define('PVE.qemu.MachineEdit', {
+
+         values.viommu = machineConf.viommu || '__default__';
+
+-        if (values.machine !== '__default__' && values.machine !== 'q35') {
++        if (values.machine !== '__default__' && values.machine !== 'q35' && values.machine !== 'microvm') {
+             values.version = values.machine;
+             values.machine = values.version.match(/q35/) ? 'q35' : '__default__';
+

@@ -1,0 +1,25 @@
+# OS / Editor
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*~
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Node / Marp
+node_modules/
+npm-debug.log*
+
+# Kernel build artifacts
+kernel/linux-*/
+kernel/*.tar.xz
+output/
+tmp/
+
+# Scratch & Logs
+scratch/
+*.log

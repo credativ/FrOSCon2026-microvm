@@ -1,0 +1,225 @@
+From: FrOSCon 2026 MicroVM Project <froscon@example.com>
+Date: Fri, 24 Jul 2026 20:20:00 +0200
+Subject: [PATCH] PVE::QemuServer: Add initial support for QEMU microvm machine type
+
+This patch introduces support for the QEMU 'microvm' machine type in Proxmox VE.
+It updates the machine type validation schema, exports base type detection,
+supported machine flags, internal POD documentation, and adjusts device
+generation to use VirtIO-MMIO transports while bypassing PCI bridges, USB
+controllers, and inapplicable ACPI power management flags.
+
+---
+ src/PVE/QemuServer.pm             | 31 ++++++++++++++++++++++---------
+ src/PVE/QemuServer/DriveDevice.pm | 20 +++++++++++++++-----
+ src/PVE/QemuServer/Machine.pm     | 11 +++++++----
+ src/PVE/QemuServer/USB.pm         |  5 +++++
+ 4 files changed, 49 insertions(+), 18 deletions(-)
+
+diff --git a/src/PVE/QemuServer.pm b/src/PVE/QemuServer.pm
+index 2f43faa..831bfbc 100644
+--- a/src/PVE/QemuServer.pm
++++ b/src/PVE/QemuServer.pm
+@@ -1333,11 +1333,13 @@ sub print_netdevice_full {
+     ) = @_;
+ 
+     my $device = $net->{model};
++    my $base_type = PVE::QemuServer::Machine::machine_base_type($conf->{machine});
++    my $pciaddr = '';
+     if ($net->{model} eq 'virtio') {
+-        $device = 'virtio-net-pci';
++        $device = ($base_type eq 'microvm') ? 'virtio-net-device' : 'virtio-net-pci';
+     }
+ 
+-    my $pciaddr = print_pci_addr("$netid", $bridges, $arch);
++    $pciaddr = print_pci_addr("$netid", $bridges, $arch) if $base_type ne 'microvm';
+     my $tmpstr = "$device,mac=$net->{macaddr},netdev=$netid$pciaddr,id=$netid";
+     if ($net->{queues} && $net->{queues} > 1 && $net->{model} eq 'virtio') {
+         # Consider we have N queues, the number of vectors needed is 2 * N + 2, i.e., one per in
+@@ -3156,6 +3158,7 @@ sub config_to_command {
+ 
+     my $machine_type = PVE::QemuServer::Machine::get_vm_machine($conf, $forcemachine);
+     my $machine_version = extract_version($machine_type, $kvmver);
++    my $base_type = PVE::QemuServer::Machine::machine_base_type($machine_type);
+     $kvm //= 1 if is_native_arch($arch);
+ 
+     $machine_version =~ m/(\d+)\.(\d+)/;
+@@ -3544,10 +3547,16 @@ sub config_to_command {
+ 
+     # enable balloon by default, unless explicitly disabled
+     if (!defined($conf->{balloon}) || $conf->{balloon}) {
+-        my $pciaddr = print_pci_addr("balloon0", $bridges, $arch);
+-        my $ballooncmd = "virtio-balloon-pci,id=balloon0$pciaddr";
+-        $ballooncmd .= ",free-page-reporting=on" if min_version($machine_version, 6, 2);
+-        push @$devices, '-device', $ballooncmd;
++        if ($base_type eq 'microvm') {
++            my $ballooncmd = "virtio-balloon-device,id=balloon0";
++            $ballooncmd .= ",free-page-reporting=on" if min_version($machine_version, 6, 2);
++            push @$devices, '-device', $ballooncmd;
++        } else {
++            my $pciaddr = print_pci_addr("balloon0", $bridges, $arch);
++            my $ballooncmd = "virtio-balloon-pci,id=balloon0$pciaddr";
++            $ballooncmd .= ",free-page-reporting=on" if min_version($machine_version, 6, 2);
++            push @$devices, '-device', $ballooncmd;
++        }
+     }
+ 
+     if ($conf->{watchdog}) {
+@@ -3735,7 +3744,7 @@ sub config_to_command {
+     # pci.4 is nested in pci.1
+     $bridges->{1} = 1 if $bridges->{4};
+ 
+-    if (!$q35) { # add pci bridges
++    if (!$q35 && $base_type ne 'microvm') { # add pci bridges
+         if (min_version($machine_version, 2, 3)) {
+             $bridges->{1} = 1;
+             $bridges->{2} = 1;
+@@ -3743,20 +3752,22 @@ sub config_to_command {
+         $bridges->{3} = 1 if $scsihw =~ m/^virtio-scsi-single/;
+     }
+ 
+-    for my $k (sort { $b cmp $a } keys %$bridges) {
+-        next if $q35 && $k < 4; # q35.cfg already includes bridges up to 3
++    if ($base_type ne 'microvm') {
++        for my $k (sort { $b cmp $a } keys %$bridges) {
++            next if $q35 && $k < 4; # q35.cfg already includes bridges up to 3
+ 
+-        my $k_name = $k;
+-        if ($k == 2 && $legacy_igd) {
+-            $k_name = "$k-igd";
+-        }
+-        my $pciaddr = print_pci_addr("pci.$k_name", undef, $arch);
+-        my $devstr = "pci-bridge,id=pci.$k,chassis_nr=$k$pciaddr";
++            my $k_name = $k;
++            if ($k == 2 && $legacy_igd) {
++                $k_name = "$k-igd";
++            }
++            my $pciaddr = print_pci_addr("pci.$k_name", undef, $arch);
++            my $devstr = "pci-bridge,id=pci.$k,chassis_nr=$k$pciaddr";
+ 
+-        if ($q35) { # add after -readconfig pve-q35.cfg
+-            splice @$devices, 2, 0, '-device', $devstr;
+-        } else {
+-            unshift @$devices, '-device', $devstr if $k > 0;
++            if ($q35) { # add after -readconfig pve-q35.cfg
++                splice @$devices, 2, 0, '-device', $devstr;
++            } else {
++                unshift @$devices, '-device', $devstr if $k > 0;
++            }
+         }
+     }
+ 
+diff --git a/src/PVE/QemuServer/DriveDevice.pm b/src/PVE/QemuServer/DriveDevice.pm
+index 37b611f..6e4497b 100644
+--- a/src/PVE/QemuServer/DriveDevice.pm
++++ b/src/PVE/QemuServer/DriveDevice.pm
+@@ -61,14 +61,24 @@ sub print_drivedevice_full {
+ 
+     my $drive_id = PVE::QemuServer::Drive::get_drive_id($drive);
+     if ($drive->{interface} eq 'virtio') {
+-        my $pciaddr = print_pci_addr("$drive_id", $bridges, $arch);
+-        $device = 'virtio-blk-pci';
+-        # for the switch to -blockdev, there is no blockdev for 'none'
+-        if (!min_version($machine_version, 10, 0) || $drive->{file} ne 'none') {
+-            $device .= ",drive=drive-$drive_id";
++        my $base_type = PVE::QemuServer::Machine::machine_base_type($machine_type);
++        if ($base_type eq 'microvm') {
++            $device = 'virtio-blk-device';
++            if (!min_version($machine_version, 10, 0) || $drive->{file} ne 'none') {
++                $device .= ",drive=drive-$drive_id";
++            }
++            $device .= ",id=${drive_id}";
++            $device .= ",iothread=iothread-$drive_id" if $drive->{iothread};
++        } else {
++            my $pciaddr = print_pci_addr("$drive_id", $bridges, $arch);
++            $device = 'virtio-blk-pci';
++            # for the switch to -blockdev, there is no blockdev for 'none'
++            if (!min_version($machine_version, 10, 0) || $drive->{file} ne 'none') {
++                $device .= ",drive=drive-$drive_id";
++            }
++            $device .= ",id=${drive_id}${pciaddr}";
++            $device .= ",iothread=iothread-$drive_id" if $drive->{iothread};
+         }
+-        $device .= ",id=${drive_id}${pciaddr}";
+-        $device .= ",iothread=iothread-$drive_id" if $drive->{iothread};
+     } elsif ($drive->{interface} eq 'scsi') {
+ 
+         my ($maxdev, $controller, $controller_prefix) =
+diff --git a/src/PVE/QemuServer/Machine.pm b/src/PVE/QemuServer/Machine.pm
+index 35161d1..e79e1ed 100644
+--- a/src/PVE/QemuServer/Machine.pm
++++ b/src/PVE/QemuServer/Machine.pm
+@@ -58,7 +58,7 @@ my $machine_fmt = {
+         description => "Specifies the QEMU machine type.",
+         type => 'string',
+         pattern =>
+-            '(pc|pc(-i440fx)?-\d+(\.\d+)+(\+pve\d+)?(\.pxe)?|q35|pc-q35-\d+(\.\d+)+(\+pve\d+)?(\.pxe)?|virt(?:-\d+(\.\d+)+)?(\+pve\d+)?)',
++            '(pc|pc(-i440fx)?-\d+(\.\d+)+(\+pve\d+)?(\.pxe)?|q35|pc-q35-\d+(\.\d+)+(\+pve\d+)?(\.pxe)?|virt(?:-\d+(\.\d+)+)?(\+pve\d+)?|microvm)',
+         maxLength => 40,
+         format_description => 'machine type',
+         optional => 1,
+@@ -153,13 +153,13 @@ sub assert_valid_machine_property {
+ 
+     my $base_type = machine_base_type($machine_type);
+ 
+-Returns the base type of the machine, currently either C<i440fx>, C<q35> or C<virt>. A value must be
++Returns the base type of the machine, currently either C<i440fx>, C<q35>, C<virt> or C<microvm>. A value must be
+ passed in. Dies if the machine type cannot be determined, but should not happen if it is valid for
+ the C<$machine_fmt> schema.
+ 
+ =cut
+ 
+-my sub machine_base_type {
++sub machine_base_type {
+     my ($machine_type) = @_;
+ 
+     die "unable to determine machine base type - no value\n" if !$machine_type;
+@@ -167,6 +167,7 @@ my sub machine_base_type {
+     return 'q35' if $machine_type =~ m/q35/;
+     return 'i440fx' if $machine_type =~ m/^pc/;
+     return 'virt' if $machine_type =~ m/^virt/;
++    return 'microvm' if $machine_type =~ m/^microvm/;
+ 
+     die "unable to determine machine base type '$machine_type'\n";
+ }
+@@ -188,6 +189,7 @@ my $supported_machine_flags = {
+         hpet => 1,
+     },
+     virt => {},
++    microvm => {},
+ };
+ 
+ =head3 machine_supports_flag
+@@ -479,8 +481,8 @@ sub get_power_state_flags {
+ 
+     my $machine = $machine_conf->{type} || default_machine_for_arch($arch);
+ 
+-    if ($machine =~ /^virt/) {
+-        return; # virt machines are normally ARM64 ones which have no concept of s3/s4
++    if ($machine =~ /^(?:virt|microvm)/) {
++        return; # virt and microvm machines have no concept of s3/s4
+     }
+ 
+     my $object = ($machine =~ m/q35/) ? "ICH9-LPC" : "PIIX4_PM";
+diff --git a/src/PVE/QemuServer/USB.pm b/src/PVE/QemuServer/USB.pm
+index c9408a4..ef25799 100644
+--- a/src/PVE/QemuServer/USB.pm
++++ b/src/PVE/QemuServer/USB.pm
+@@ -123,6 +123,9 @@ sub get_usb_controllers {
+     my ($conf, $bridges, $arch, $machine_version) = @_;
+ 
+     my $devices = [];
++    my $base_type = PVE::QemuServer::Machine::machine_base_type($conf->{machine});
++    return @$devices if $base_type eq 'microvm';
++
+     my $pciaddr = "";
+ 
+     my $ostype = $conf->{ostype};
+@@ -171,6 +174,8 @@ sub get_usb_devices {
+     my ($conf, $features, $bootorder, $machine_version) = @_;
+ 
+     my $devices = [];
++    my $base_type = PVE::QemuServer::Machine::machine_base_type($conf->{machine});
++    return @$devices if $base_type eq 'microvm';
+ 
+     my $ostype = $conf->{ostype};
+     my $use_qemu_xhci =

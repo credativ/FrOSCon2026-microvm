@@ -1,0 +1,507 @@
+/* @theme credativ
+ *
+ * Modern credativ Marp Theme (Brand Guidelines compliant)
+ * Colors: credativ Red (#E20613), Slate Dark (#1F2430), Clean Canvas (#F4F6F8)
+ * Fonts: Poppins (Titles) + Mulish (Body) + Menlo/JetBrains Mono (Code)
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Mulish:ital,wght@0,300..900;1,300..900&family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&display=swap');
+
+/* Fallback local fonts */
+@font-face { font-family: "Poppins"; src: url("assets/fonts/Poppins-Medium.ttf"); font-weight: 500; }
+@font-face { font-family: "Poppins"; src: url("assets/fonts/Poppins-Bold.ttf");   font-weight: 700; }
+@font-face { font-family: "Mulish";  src: url("assets/fonts/Muli-Regular.ttf");   font-weight: 400; }
+@font-face { font-family: "Mulish";  src: url("assets/fonts/Muli-Bold.ttf");      font-weight: 700; }
+
+:root {
+  --cred-red:       #e20613;   /* credativ Primary Logo Red */
+  --cred-darkred:   #be0d0d;   /* credativ Dark Red */
+  --cred-dark:      #1a202c;   /* Slate Dark Heading Color */
+  --cred-text:      #2d3748;   /* High-Contrast Body Text */
+  --cred-muted:     #64748b;   /* Muted Grey / Footline */
+  --cred-bg:        #f8fafc;   /* Modern Ultra-Light Canvas Background */
+  --cred-card-bg:   #ffffff;   /* Pure White Card Background */
+  --cred-border:    #e2e8f0;   /* Crisp Slate Border */
+  --cred-border-subtle: #cbd5e1;
+
+  --color-pve:      #e20613;   /* Proxmox / credativ Red */
+  --color-qemu:     #2563eb;   /* QEMU Blue */
+  --color-fc:       #ea580c;   /* Firecracker Orange */
+  --color-green:    #16a34a;   /* Slim Kernel / Success Green */
+  --color-purple:   #7c3aed;   /* Architecture Purple */
+  --color-amber:    #d97706;   /* Warning Amber */
+}
+
+/* ===== Base Slide ===== */
+section {
+  position: relative;
+  font-family: "Mulish", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-weight: 400;
+  font-size: 21px;
+  line-height: 1.45;
+  color: var(--cred-text);
+  padding: 44px 60px 60px;
+  background-color: var(--cred-bg);
+  background-image: url("assets/credativ-logo.png");
+  background-repeat: no-repeat;
+  background-position: right 48px top 26px;
+  background-size: auto 34px;
+}
+
+/* ===== Headings ===== */
+section h1, section h2, section h3, section h4 {
+  font-family: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 600;
+  color: var(--cred-dark);
+  margin: 0 0 0.45em;
+  letter-spacing: -0.015em;
+}
+
+section h2 {
+  font-size: 1.4em;
+  padding-right: 160px;          /* Reserve room for credativ logo in header */
+  margin-bottom: 0.45em;
+  display: block;
+  position: relative;
+}
+
+section h2::after {               /* Official credativ Red Accent Bar */
+  content: "";
+  display: block;
+  width: 48px;
+  height: 3.5px;
+  background: var(--cred-red);
+  margin-top: 0.28em;
+  border-radius: 3px;
+}
+
+section h1 code, section h2 code, section h3 code {
+  font-size: 0.88em;
+  padding: 0.05em 0.35em;
+  vertical-align: baseline;
+  background: #ffffff;
+  color: var(--cred-dark);
+  border: 1px solid var(--cred-border);
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+section h3 {
+  font-size: 1.05em;
+  color: var(--cred-dark);
+  font-weight: 600;
+  margin-top: 0.2em;
+  margin-bottom: 0.4em;
+}
+
+section h4 {
+  font-size: 0.9em;
+  color: var(--cred-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+section a { color: var(--cred-red); text-decoration: none; font-weight: 600; }
+section a:hover { text-decoration: underline; }
+section strong { font-weight: 700; color: var(--cred-dark); }
+
+/* ===== Lists ===== */
+section ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 0.4em 0;
+}
+
+section ul li {
+  margin: 0.35em 0;
+  padding-left: 1.25em;
+  position: relative;
+}
+
+section ul li::before {
+  content: "●";
+  color: var(--cred-red);
+  font-size: 0.55em;
+  position: absolute;
+  left: 0;
+  top: 0.52em;
+}
+
+section.title ul li,
+section.closing ul li,
+section.segue ul li {
+  padding-left: 0 !important;
+  text-align: center;
+}
+
+section.title ul li::before,
+section.closing ul li::before,
+section.segue ul li::before {
+  display: none !important;
+}
+
+section ol {
+  padding-left: 1.2em;
+  margin: 0.4em 0;
+}
+
+section ol li {
+  margin: 0.35em 0;
+  padding-left: 0.3em;
+}
+
+/* ===== Tables ===== */
+section table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.82em;
+  margin: 0.6em 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--cred-border);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+  background: #ffffff;
+}
+
+section th {
+  background: var(--cred-dark);
+  color: #ffffff;
+  padding: 0.6em 0.9em;
+  text-align: left;
+  font-weight: 600;
+  font-family: "Poppins", sans-serif;
+  border-bottom: 2px solid var(--cred-red);
+}
+
+section td {
+  padding: 0.5em 0.9em;
+  border-bottom: 1px solid var(--cred-border);
+  color: var(--cred-text);
+}
+
+section tr:last-child td {
+  border-bottom: none;
+}
+
+section tr:nth-child(even) td {
+  background-color: #fcfdfe;
+}
+
+section tr:hover td {
+  background-color: #f1f5f9;
+}
+
+/* ===== Code & Terminal Blocks ===== */
+section pre {
+  background: #0f172a;           /* Deep modern slate terminal */
+  color: #f8fafc;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12);
+  padding: 0.8em 1.1em;
+  font-size: 0.62em;
+  line-height: 1.45;
+  overflow-x: auto;
+}
+
+section code {
+  font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+}
+
+section pre code {
+  color: #f1f5f9;
+  background: transparent;
+  padding: 0;
+  border: none;
+}
+
+section :not(pre) > code {
+  background: #ffffff;
+  color: var(--cred-dark);
+  border: 1px solid var(--cred-border);
+  border-radius: 5px;
+  padding: 0.1em 0.4em;
+  font-size: 0.85em;
+  font-weight: 600;
+}
+
+/* ===== Layout: Columns ===== */
+.cols  { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: start; }
+.cols3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.1rem; align-items: start; }
+.cols-30-70 { display: grid; grid-template-columns: 3fr 7fr; gap: 1.5rem; align-items: start; }
+.cols-70-30 { display: grid; grid-template-columns: 7fr 3fr; gap: 1.5rem; align-items: start; }
+
+/* ===== Modern Cards ===== */
+.card {
+  background: var(--cred-card-bg);
+  border: 1px solid var(--cred-border);
+  border-radius: 8px;
+  padding: 0.85rem 1.05rem;
+  border-left: 4px solid var(--color-qemu);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+  font-size: 0.84em;
+}
+
+.card.pve   { border-left-color: var(--cred-red); }
+.card.fc    { border-left-color: var(--color-fc); }
+.card.ok    { border-left-color: var(--color-green); }
+.card.warn  { border-left-color: var(--color-amber); }
+.card.arch  { border-left-color: var(--color-purple); }
+
+.card strong, .card b {
+  display: block;
+  margin-bottom: 0.25em;
+  font-size: 1.05em;
+  color: var(--cred-dark);
+}
+
+/* ===== Hint / Callout Box ===== */
+.hint {
+  background: #ffffff;
+  border: 1px solid var(--cred-border);
+  border-left: 4px solid var(--cred-red);
+  border-radius: 8px;
+  padding: 0.65rem 1.0rem;
+  font-size: 0.8em;
+  color: #334155;
+  margin-top: 0.65rem;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+}
+
+.hint strong {
+  color: var(--cred-dark);
+}
+
+/* ===== Badges & Tags ===== */
+.tag, .badge {
+  display: inline-block;
+  padding: 0.15em 0.6em;
+  border-radius: 4px;
+  font-size: 0.45em;
+  font-weight: 700;
+  vertical-align: middle;
+  margin-left: 0.5rem;
+  color: #ffffff;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.tag.pve  { background: var(--cred-red); }
+.tag.fc   { background: var(--color-fc); }
+.tag.qemu { background: var(--color-qemu); }
+.tag.new  { background: var(--color-purple); }
+.tag.ok   { background: var(--color-green); }
+
+/* ===== Architecture Diagram Elements ===== */
+.arch-stack {
+  max-width: 580px;
+  margin: 0.4rem auto;
+}
+
+.arch-box {
+  border: 1.5px solid;
+  border-radius: 8px;
+  padding: 0.4rem 0.85rem;
+  margin: 0.25rem 0;
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.75em;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+}
+
+.arch-box small { font-weight: 400; opacity: 0.85; }
+.arch-box.hw    { border-color: #94a3b8; color: #475569; }
+.arch-box.kvm   { border-color: var(--color-purple); color: var(--color-purple); }
+.arch-box.vmm   { border-color: var(--color-qemu); color: var(--color-qemu); }
+.arch-box.fc    { border-color: var(--color-fc); color: var(--color-fc); }
+.arch-box.guest { border-color: var(--color-green); color: var(--color-green); }
+.arch-box.pve   { border-color: var(--cred-red); color: var(--cred-red); }
+
+.arch-arrow {
+  text-align: center;
+  font-size: 0.85em;
+  color: #94a3b8;
+  line-height: 1.1;
+}
+
+.arch-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.45rem;
+  margin: 0.25rem 0;
+}
+
+/* ===== Images ===== */
+section img {
+  display: block;
+  margin: 0 auto;
+  border-radius: 6px;
+}
+
+/* ===== Footline (Official credativ layout) ===== */
+section footer {
+  position: absolute;
+  left: 60px;
+  right: 60px;
+  bottom: 18px;
+  margin: 0;
+  width: auto;
+  font-family: "Mulish", sans-serif;
+  color: var(--cred-muted);
+  font-size: 13px;
+  border-top: 1px solid var(--cred-border);
+  padding: 6px 0 0;
+  text-align: left;
+}
+
+section footer::after {
+  content: "credativ GmbH";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 6px;
+  text-align: center;
+  color: var(--cred-muted);
+}
+
+section[data-marpit-pagination]::after {
+  bottom: 22px !important;
+  right: 60px !important;
+  padding: 0 !important;
+  color: var(--cred-muted);
+  font-family: "Mulish", sans-serif;
+  font-size: 13px;
+}
+
+section.title footer,
+section.segue footer,
+section.closing footer {
+  display: none;
+}
+
+/* ===== Title Slide ===== */
+section.title {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  background-image: url("assets/credativ-logo.png"), url("assets/credativ-background.png");
+  background-repeat: no-repeat, no-repeat;
+  background-position: right 48px top 30px, center center;
+  background-size: auto 40px, cover;
+  padding: 60px 80px;
+}
+
+section.title h1 {
+  font-size: 2.35em;
+  font-weight: 700;
+  color: var(--cred-dark);
+  margin-bottom: 0.15em;
+  letter-spacing: -0.02em;
+}
+
+section.title h2 { display: none; }
+
+section.title h3 {
+  font-family: "Poppins", sans-serif;
+  font-weight: 500;
+  font-size: 1.22em;
+  color: var(--cred-dark);
+  margin-bottom: 1.4em;
+  position: relative;
+  padding-bottom: 0.75em;
+}
+
+section.title h3::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 0;
+  width: 72px;
+  height: 3.5px;
+  background: var(--cred-red);
+  border-radius: 3px;
+}
+
+section.title p {
+  font-size: 0.95em;
+  color: var(--cred-text);
+  margin: 0.25em 0;
+}
+
+/* ===== Segue / Section Header Slides ===== */
+section.segue {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  background-image: url("assets/credativ-logo.png"), url("assets/credativ-background.png");
+  background-repeat: no-repeat, no-repeat;
+  background-position: right 48px top 30px, center center;
+  background-size: auto 36px, cover;
+}
+
+section.segue h2 {
+  font-size: 2.1em;
+  font-weight: 700;
+  color: var(--cred-dark);
+  padding-right: 0;
+  margin-bottom: 0.2em;
+  align-items: center;
+}
+
+section.segue h2::after {
+  width: 64px;
+  height: 4px;
+  margin-top: 0.35em;
+}
+
+section.segue p {
+  font-size: 1.1em;
+  color: var(--cred-muted);
+  max-width: 700px;
+}
+
+/* ===== Closing / Q&A Slide ===== */
+section.closing {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  background-image: url("assets/credativ-logo.png"), url("assets/credativ-background.png");
+  background-repeat: no-repeat, no-repeat;
+  background-position: right 48px top 30px, center center;
+  background-size: auto 40px, cover;
+}
+
+section.closing h1 {
+  font-size: 2.3em;
+  color: var(--cred-dark);
+  margin-bottom: 0.2em;
+}
+
+section.closing h3 {
+  font-size: 1.15em;
+  color: var(--cred-muted);
+  font-weight: 500;
+  position: relative;
+  padding-bottom: 0.7em;
+  margin-bottom: 1.2em;
+}
+
+section.closing h3::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 0;
+  width: 64px;
+  height: 3.5px;
+  background: var(--cred-red);
+  border-radius: 3px;
+}

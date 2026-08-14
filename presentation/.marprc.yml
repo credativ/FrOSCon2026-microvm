@@ -1,0 +1,4 @@
+themeSet:
+  - ./marp-theme.css
+allowLocalFiles: true
+html: true

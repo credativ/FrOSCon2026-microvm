@@ -1,0 +1,30 @@
+From: FrOSCon 2026 MicroVM Project <froscon@example.com>
+Date: Fri, 14 Aug 2026 08:35:00 +0200
+Subject: [PATCH] pve-docs: Document QEMU microvm machine type in qm.adoc
+
+Add documentation for the lightweight 'microvm' machine type to the
+Proxmox VE reference documentation (qm.adoc), explaining its use cases,
+virtio-mmio transport, and direct kernel boot capabilities.
+
+---
+ qm.adoc | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/qm.adoc b/qm.adoc
+index 8e41bf1..a912dc3 100644
+--- a/qm.adoc
++++ b/qm.adoc
+@@ -210,6 +210,14 @@ QEMU can virtualize different machine types:
+   modern guest operating systems, PCIe devices, and PCI passthrough.
+   Recommended for modern Linux and Windows setups.
+ 
++* `microvm`: A minimalist, lightweight x86_64 machine type that omits legacy
++  PCI, ACPI, and BIOS emulation. It relies on `virtio-mmio` transport and direct
++  kernel booting (`-kernel` and `-initrd`/`-append`), enabling sub-second cold
++  boot times and low memory footprints. Recommended for ephemeral workloads,
++  CI/CD runners, and secure multi-tenant microVM sandboxes. Note: microVMs do
++  not support live migration, hardware hotplug, or traditional PCI/PCIe devices.
++
+ * `virt` (arm64/aarch64 only): The standard ARM64 virtual machine type.
+ 
+ 
