@@ -86,6 +86,16 @@ Ein Spruch, ein Nicken in die Runde, eine Zusage — und schon war ich im Kaninc
 <strong>Der Anwendungsfall:</strong> Kurzlebige Workloads (CI/CD Runner, FaaS, Multi-Tenant Build-Umgebungen). Container bieten zu wenig Isolation, Standard-VMs sind zu schwergewichtig. Höhere Sicherheitsanforderungen.
 </div>
 
+<!--
+FaaS kurz erklären (erstes Vorkommen):
+FaaS = Function as a Service. Man deployt nicht einen ganzen Server, sondern einzelne
+Funktionen/Code-Schnipsel. Der Provider startet pro Aufruf blitzschnell eine isolierte
+Umgebung, führt die Funktion aus und wirft sie danach wieder weg (Beispiel: AWS Lambda).
+Genau dieser Lastfall – tausende winzige, kurzlebige, isolierte Starts – hat microVMs
+überhaupt nötig gemacht.
+-->
+
+
 ---
 
 ## Was eine MicroVM ausmacht
@@ -167,6 +177,17 @@ drumherum. Merksatz: KVM ist bei allen drei gleich – nur der VMM unterscheidet
 <strong>Der Punkt für Proxmox:</strong> QEMU microVM steckt bereits im <code>qemu-system-x86_64</code>, das Proxmox ohnehin mitliefert. Es braucht keinen neuen VMM, nur die Freischaltung in Proxmox.
 </div>
 
+<!--
+q35 einordnen – welche Maschinentypen Proxmox sonst kennt:
+- pc  = i440fx, der historische Default (Intel 440FX, PCI, PIIX3)
+- q35 = moderner Q35-Chipsatz mit echtem PCIe (heutige Empfehlung)
+- versionsgepinnt: pc-i440fx-9.0 / pc-q35-9.0, dazu die +pveN-Revision
+  (hält den Geräte-State über QEMU-Updates migrations-kompatibel)
+- virt = für ARM/aarch64-Gäste
+Unser Patch ergänzt genau einen weiteren Basistyp: microvm.
+-->
+
+
 ---
 
 ## Firecracker: Das radikale VMM-Modell
@@ -191,8 +212,10 @@ drumherum. Merksatz: KVM ist bei allen drei gleich – nur der VMM unterscheidet
 </div>
 
 <div class="hint">
-<strong>Praxiserfahrung:</strong> Mehrere Plattform-Teams, die mit Firecracker gestartet sind, wechselten für flexiblere Workloads zu QEMU/MicroVMs zurück – weil Firecrackers bewusste Reduktion außerhalb von FaaS schnell zur harten Grenze wird.
+Mehrere Plattform-Teams, die mit Firecracker gestartet sind, <a href="https://hocus.dev/blog/qemu-vs-firecracker/">wechselten für flexiblere Workloads zu QEMU/MicroVMs zurück</a> – weil Firecrackers bewusste Reduktion außerhalb von FaaS schnell zur harten Grenze wird.
 </div>
+
+<p class="fn"><a href="https://hocus.dev/blog/qemu-vs-firecracker/">hocus.dev/blog/qemu-vs-firecracker</a></p>
 
 ---
 
