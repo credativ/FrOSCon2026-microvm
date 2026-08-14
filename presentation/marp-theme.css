@@ -282,14 +282,34 @@ section :not(pre) > code {
   line-height: 1.35;
 }
 
-/* ===== Footnote (klein, nur Quelle/URL) ===== */
-.fn {
-  font-size: 0.5em;
+/* ===== Footnotes ===== */
+.footnote, .fn {
+  position: absolute;
+  bottom: 20px;
+  left: 60px;
+  right: 180px;
+  font-size: 0.58em;
   color: var(--cred-muted);
-  margin-top: 0.5rem;
-  line-height: 1.3;
+  line-height: 1.35;
+  border-top: 1px solid var(--cred-border);
+  padding-top: 6px;
 }
-.fn a { color: var(--cred-muted); text-decoration: underline; }
+
+.footnote a, .fn a {
+  color: var(--cred-muted);
+  text-decoration: underline;
+}
+
+.footnote a:hover, .fn a:hover {
+  color: var(--cred-red);
+}
+
+.footnote sup, .fn sup {
+  font-size: 0.9em;
+  font-weight: 600;
+  color: var(--cred-dark);
+  margin-right: 0.25em;
+}
 
 /* ===== Badges & Tags ===== */
 .tag, .badge {
