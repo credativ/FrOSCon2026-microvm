@@ -83,7 +83,7 @@ Ein Spruch, ein Nicken in die Runde, eine Zusage — und schon war ich im Kaninc
 </div>
 
 <div class="hint">
-<strong>Der Anwendungsfall:</strong> Kurzlebige Workloads (CI/CD Runner, FaaS, Multi-Tenant Build-Umgebungen). Container bieten zu wenig Isolation, Standard-VMs sind zu schwergewichtig.
+<strong>Der Anwendungsfall:</strong> Kurzlebige Workloads (CI/CD Runner, FaaS, Multi-Tenant Build-Umgebungen). Container bieten zu wenig Isolation, Standard-VMs sind zu schwergewichtig. Höhere Sicherheitsanforderungen.
 </div>
 
 ---
@@ -96,7 +96,7 @@ Ein Spruch, ein Nicken in die Runde, eine Zusage — und schon war ich im Kaninc
 **Eigenschaften von MicroVMs:**
 - **VM-Isolation:** Eigener Linux-Kernel via KVM (harte Sicherheitsgrenze)
 - **Schneller Start:** Bootzeiten von ~150–200 ms
-- **Reduzierte Angriffsfläche:** Keine Emulation von Floppy, IDE, VGA, PCI oder USB – historische Hauptquellen von QEMU-Sicherheitslücken (CVEs)
+- **Reduzierte Angriffsfläche:** Keine Emulation von Floppy, IDE, VGA, PCI oder USB – historische Quellen von QEMU-Sicherheitslücken (CVEs)
 - **Schlanker Footprint:** Nur minimale VirtIO-MMIO-Geräte am Systembus
 
 </div>
@@ -139,6 +139,17 @@ Ein Spruch, ein Nicken in die Runde, eine Zusage — und schon war ich im Kaninc
 </div>
 
 <p class="note">KVM ist bei allen dreien identisch. Sie unterscheiden sich primär im VMM (Device-Modell, Firmware, Angriffsfläche).</p>
+
+<!--
+VMM kurz erklären (erstes Vorkommen):
+VMM = Virtual Machine Monitor. Das Userspace-Programm (QEMU, Firecracker, cloud-hypervisor),
+das auf KVM aufsetzt: es sagt KVM "bau mir eine VM mit so viel RAM und so vielen vCPUs",
+baut dem Gast die virtuelle Hardware (Platte, Netz, serielle Konsole), lädt den Kernel und
+behandelt die I/O. KVM ist der eigentliche Hypervisor im Kernel; der VMM ist das Programm
+drumherum. Merksatz: KVM ist bei allen drei gleich – nur der VMM unterscheidet sich.
+-->
+
+
 
 ---
 
