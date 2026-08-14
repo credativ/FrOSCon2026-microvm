@@ -1,7 +1,12 @@
 # MicroVMs on Proxmox VE (FrOSCon 2026)
 
+[![Build and Publish Slides](https://github.com/credativ/FrOSCon2026-microvm/actions/workflows/deploy-slides.yml/badge.svg)](https://github.com/credativ/FrOSCon2026-microvm/actions/workflows/deploy-slides.yml)
+[![Live Presentation](https://img.shields.io/badge/Slides-credativ.github.io-00529B?logo=html5&logoColor=white)](https://credativ.github.io/FrOSCon2026-microvm/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 > **Presentation at FrOSCon 2026** · Bonn-Rhein-Sieg University of Applied Sciences  
-> **Speaker:** Alexander Wirt (`alexander.wirt@credativ.de`), CTO [credativ GmbH](https://credativ.de), Debian Developer since 2002.
+> **Speaker:** Alexander Wirt (`alexander.wirt@credativ.de`), CTO [credativ GmbH](https://credativ.de), Debian Developer since 2002.  
+> **Live Slides:** 🖥️ [https://credativ.github.io/FrOSCon2026-microvm/](https://credativ.github.io/FrOSCon2026-microvm/) · 📄 [PDF Version](https://credativ.github.io/FrOSCon2026-microvm/froscon-microvm.pdf)
 
 ---
 
@@ -108,8 +113,9 @@ qm terminal 100
 
 ## 🛠️ Rebuilding Presentation Slides
 
-The slide deck is built with [Marp](https://marp.app/):
+The slide deck is built with [Marp](https://marp.app/) and automatically compiled and deployed to **[https://credativ.github.io/FrOSCon2026-microvm/](https://credativ.github.io/FrOSCon2026-microvm/)** via GitHub Actions on every push to `main`.
 
+To build locally:
 ```bash
 cd presentation/
 ./build-slides.sh
