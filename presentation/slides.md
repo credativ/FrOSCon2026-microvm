@@ -12,7 +12,7 @@ footer: "Alexander Wirt · FrOSCon 2026"
 
 # MicroVMs auf Proxmox VE
 
-### QEmu on steroids 
+### QEMU on steroids 
 
 FrOSCon 2026 · Hochschule Bonn-Rhein-Sieg · Alexander Wirt
 
