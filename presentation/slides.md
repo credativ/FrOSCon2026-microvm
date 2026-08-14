@@ -12,7 +12,7 @@ footer: "Alexander Wirt · FrOSCon 2026"
 
 # MicroVMs auf Proxmox VE
 
-### Minimal-invasiver QEMU-MicroVM-Patch, Benchmarks & Praxiserfahrungen
+### QEmu on steroids 
 
 FrOSCon 2026 · Hochschule Bonn-Rhein-Sieg · Alexander Wirt
 
@@ -24,11 +24,25 @@ FrOSCon 2026 · Hochschule Bonn-Rhein-Sieg · Alexander Wirt
 
 - Debian Developer seit 2002
 - Arbeit bei [credativ](https://credativ.de) – Open-Source-Beratung und Linux-Infrastruktur
-- Schwerpunkte: Virtualisierung, Hochverfügbarkeit, Proxmox VE
+- Proxmox Trainer
+- Schwerpunkte: Virtualisierung, Hochverfügbarkeit, Proxmox VE, Monitoring, Architektr
 
 <div class="hint">
-<strong>Wie es dazu kam:</strong> Mein Kollege Florian meinte beiläufig: „MicroVMs in Proxmox — das müsste man mal machen." Ich bin prompt darauf angesprungen. Dieser Vortrag ist, was daraus wurde.
+<strong>Wie es dazu kam:</strong> Mein Kollege Florian meinte beiläufig: „MicroVMs in Proxmox — das müsste man mal machen.“ Na ja, wie es halt so ist steh ich nun hier. Danke Florian!
 </div>
+
+---
+
+<!-- _class: segue -->
+<!-- _paginate: false -->
+
+## Follow the white rabbit
+
+<img src="assets/rabbit-hole.jpg" alt="Der Kaninchenbau" style="max-height:400px; width:auto; margin:0.3em auto 0.5em; box-shadow:0 6px 18px rgba(15,23,42,0.18)">
+
+Ein Spruch, ein Nicken in die Runde, eine Zusage — und schon war ich im Kaninchenbau.
+
+<p class="note">Illustration: KI-generiert</p>
 
 ---
 
@@ -184,10 +198,11 @@ FrOSCon 2026 · Hochschule Bonn-Rhein-Sieg · Alexander Wirt
 </div>
 <div>
 
-### Zusätzliche Härtung
-- **QEMU:** seccomp via `-sandbox on`, unter PVE zusätzlich AppArmor/sVirt je VM.
-- **Firecracker:** Jailer (seccomp, Namespaces, cgroups, chroot) plus Rust als speichersichere Sprache.
-- microVM erbt QEMUs Härtung; die kleinere Gerätemenge verkleinert die Fläche zusätzlich.
+### Härtung – und was PVE (nicht) tut
+- **QEMU kann mehr:** seccomp via `-sandbox on`; per AppArmor ließe sich der QEMU-Prozess je VM zusätzlich einsperren.
+- **Fairerweise:** Proxmox liefert dafür – anders als für LXC – **kein** AppArmor-Profil mit. Das bleibt Handarbeit und ist nicht Teil des Patches.
+- Selbst mit AppArmor erreicht QEMU nicht ganz Firecrackers seccomp-Niveau (Jailer: ~50 Syscalls, Namespaces, cgroups, chroot + Rust).
+- Unabhängig davon: die kleinere Gerätemenge der microVM verkleinert die Angriffsfläche ohnehin.
 
 </div>
 </div>
@@ -469,27 +484,27 @@ QEMU microvm skaliert beim parallelen Start bis 32 gleichzeitige VMs nahe an Fir
 
 ## Kostet die Proxmox-Schicht etwas?
 
-Vergleich: **`qm start` (gepatchtes PVE)** gegen **rohes `qemu-system-x86_64 -M microvm`**.
+Die ehrliche Antwort braucht **keinen Benchmark** – sie steht im `qm showcmd`.
 
 <div class="cols">
 <div>
 
 ### Was identisch ist
-- Die erzeugte QEMU-Kommandozeile ist dieselbe (siehe `qm showcmd`).
-- Der **Gast-Boot selbst ist gleich schnell** – Proxmox ändert am VM-Start nichts.
+- `qm start` und rohes `qemu-system-x86_64 -M microvm` erzeugen **dieselbe QEMU-Kommandozeile**.
+- Damit ist der Gast-Boot per Definition der gleiche QEMU-Aufruf – Proxmox schiebt sich nicht in den VM-Start.
 
 </div>
 <div>
 
 ### Was PVE hinzufügt
-- Einmaliger Management-Pfad: `pvedaemon`/`qm`, Config-Parsing, tap-Setup.
-- Liegt im **Millisekundenbereich**, fällt einmal pro VM-Start an – nicht im Gast.
+- Ein einmaliger Management-Pfad davor: `pvedaemon`/`qm`, Config-Parsing, tap-Setup.
+- Läuft auf dem Host, einmal pro VM-Start – **nicht im Gast-Boot**.
 
 </div>
 </div>
 
 <div class="hint">
-Kernaussage: Der Proxmox-Komfort (Config, API, GUI, Storage, Netz) kostet praktisch keine Boot-Zeit. <em>Chart aus dem <code>pve_microvm</code>-Testbed-Lauf folgt.</em>
+Kernaussage: Der Proxmox-Komfort (Config, API, GUI, Storage, Netz) sitzt <em>vor</em> dem VM-Start, nicht darin. Das zeigt schon der identische <code>qm showcmd</code> – ohne dass man eine Zahl messen muss.
 </div>
 
 ---

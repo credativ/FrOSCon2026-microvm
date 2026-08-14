@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 520" role="img" aria-label="Follow the white rabbit – der Kaninchenbau">
+  <defs>
+    <radialGradient id="hole" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#05070b"/>
+      <stop offset="55%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1a202c"/>
+    </radialGradient>
+    <filter id="soft" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#0f172a" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- Kaninchenbau: perspektivische Ringe, die in die Tiefe führen -->
+  <g fill="none" transform="translate(480 305)">
+    <ellipse rx="430" ry="172" stroke="#cbd5e1" stroke-width="2" opacity="0.45"/>
+    <ellipse rx="356" ry="142" stroke="#94a3b8" stroke-width="2" opacity="0.55"/>
+    <ellipse rx="288" ry="115" stroke="#64748b" stroke-width="2" opacity="0.7"/>
+    <ellipse rx="226" ry="90"  stroke="#475569" stroke-width="2.5" opacity="0.8"/>
+    <ellipse rx="170" ry="68"  stroke="#e20613" stroke-width="3.5" opacity="0.95"/>
+    <ellipse rx="120" ry="48"  stroke="#334155" stroke-width="2.5"/>
+    <ellipse rx="74"  ry="30"  stroke="#1a202c" stroke-width="2.5"/>
+    <ellipse rx="52"  ry="21"  fill="url(#hole)" stroke="none"/>
+  </g>
+
+  <!-- Weißes Kaninchen am Rand, kurz vor dem Sprung -->
+  <g transform="translate(480 138)" filter="url(#soft)">
+    <ellipse cx="22" cy="-12" rx="9" ry="9" fill="#ffffff"/>            <!-- Schwänzchen -->
+    <ellipse cx="0"  cy="-30" rx="27" ry="35" fill="#ffffff"/>         <!-- Körper -->
+    <circle  cx="0"  cy="-66" r="18" fill="#ffffff"/>                   <!-- Kopf -->
+    <ellipse cx="-9" cy="-95" rx="7.5" ry="25" fill="#ffffff" transform="rotate(-14 -9 -95)"/>
+    <ellipse cx="9"  cy="-95" rx="7.5" ry="25" fill="#ffffff" transform="rotate(14 9 -95)"/>
+    <ellipse cx="-9" cy="-95" rx="3" ry="16" fill="#f8d3d6" transform="rotate(-14 -9 -95)"/>
+    <ellipse cx="9"  cy="-95" rx="3" ry="16" fill="#f8d3d6" transform="rotate(14 9 -95)"/>
+    <circle  cx="6"  cy="-68" r="2" fill="#1a202c"/>                    <!-- Auge -->
+    <circle  cx="0"  cy="-60" r="1.8" fill="#e20613"/>                  <!-- Nase -->
+    <ellipse cx="-12" cy="1" rx="10" ry="5" fill="#ffffff"/>           <!-- Pfote -->
+  </g>
+
+  <!-- Spur in die Tiefe -->
+  <g fill="#94a3b8">
+    <circle cx="480" cy="180" r="3.2" opacity="0.8"/>
+    <circle cx="480" cy="215" r="2.6" opacity="0.6"/>
+    <circle cx="480" cy="250" r="2.0" opacity="0.45"/>
+    <circle cx="480" cy="285" r="1.5" opacity="0.3"/>
+  </g>
+</svg>
