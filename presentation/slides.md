@@ -79,10 +79,10 @@ FrOSCon 2026 · Hochschule Bonn-Rhein-Sieg · Alexander Wirt
 <div>
 
 **Eigenschaften von MicroVMs:**
-- **VM-Isolation:** Eigener Linux-Kernel via KVM
+- **VM-Isolation:** Eigener Linux-Kernel via KVM (harte Sicherheitsgrenze)
 - **Schneller Start:** Bootzeiten von ~150–200 ms
-- **Schlanker Footprint:** Kein Ballast durch ungenutzte Emulation
-- **Minimale Angriffsfläche:** Nur eine Handvoll VirtIO-MMIO-Geräte statt des vollen PC-Modells
+- **Reduzierte Angriffsfläche:** Keine Emulation von Floppy, IDE, VGA, PCI oder USB – historische Hauptquellen von QEMU-Sicherheitslücken (CVEs)
+- **Schlanker Footprint:** Nur minimale VirtIO-MMIO-Geräte am Systembus
 
 </div>
 <div>
@@ -436,6 +436,7 @@ memory: 512
 kernel: /var/lib/vz/template/qemu/vmlinuz-slim
 args: console=ttyS0 root=/dev/vda rw
 virtio0: local-lvm:vm-100-disk-0,size=4G
+net0: virtio=BC:24:11:AA:BB:CC,bridge=vmbr0
 serial0: socket
 vga: serial0
 ```
@@ -458,6 +459,8 @@ vga: serial0
   -device 'isa-serial,chardev=serial0' \
   -blockdev '{"driver":"raw","file":{"aio":"io_uring","filename":".../vm-101-disk-0.raw"},"node-name":"drive-virtio0"}' \
   -device 'virtio-blk-device,drive=drive-virtio0,id=virtio0' \
+  -netdev 'type=tap,id=net0,ifname=tap101i0,script=/var/lib/qemu-server/pve-bridge,...' \
+  -device 'virtio-net-device,mac=bc:24:11:aa:bb:cc,netdev=net0,id=net0' \
   -device 'virtio-balloon-device,id=balloon0,free-page-reporting=on'
 ```
 
@@ -465,7 +468,7 @@ vga: serial0
 <div>
 
 - **`microvm+pve0`:** Kein PCI-Root, kein ACPI S3/S4
-- **`virtio-*-device`:** VirtIO-MMIO statt PCI
+- **`virtio-*-device`:** VirtIO-MMIO für Disk, Net & Balloon
 - **`isa-serial`:** Serielle Konsole über UNIX-Socket
 
 </div>
@@ -491,6 +494,7 @@ main-system-bus (MicroVM)
 │   └── isa.0
 │       └── isa-serial (ttyS0)
 ├── virtio-mmio (24 statische MMIO-Slots)
+│   ├── [Slot 21] ── virtio-net-device ("net0" via TAP)
 │   ├── [Slot 22] ── virtio-blk-device ("virtio0")
 │   └── [Slot 23] ── virtio-balloon-device ("balloon0")
 ├── acpi-ged (ACPI Generic Event Device)
