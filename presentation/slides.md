@@ -129,6 +129,18 @@ Genau dieser Lastfall – tausende winzige, kurzlebige, isolierte Starts – hat
 </div>
 </div>
 
+<!--
+virtio-mmio kurz erklären (erstes Vorkommen):
+virtio = die paravirtualisierten Standard-Geräte (Disk, Netz, …); der Gast weiß, dass er
+in einer VM läuft und redet über eine schlanke Schnittstelle direkt mit dem Host statt
+echte Hardware zu emulieren. "Transport" ist der Weg, über den der Gast diese Geräte findet:
+- virtio-PCI: Geräte hängen am (emulierten) PCI-Bus – Discovery/Enumeration wie bei echter
+  PC-Hardware, dafür braucht es die ganze PCI/ACPI-Maschinerie.
+- virtio-mmio: die Geräte liegen an festen, fest verdrahteten Speicheradressen (Memory-Mapped
+  I/O) am Systembus – kein PCI-Bus nötig. Simpler und schneller beim Start, dafür statisch
+  (feste Slots, kein Hotplug). Genau das nutzen microVM und Firecracker.
+-->
+
 ---
 
 ## Isolationsspektrum: Ein KVM, drei VMMs
@@ -234,9 +246,9 @@ Mehrere Plattform-Teams, die mit Firecracker gestartet sind, z.B. Hocus [1](http
 
 ### Härtung – und was PVE (nicht) tut
 - **QEMU kann mehr:** seccomp via `-sandbox on`; per AppArmor ließe sich der QEMU-Prozess je VM zusätzlich einsperren.
-- **Fairerweise:** Proxmox liefert dafür – anders als für LXC – **kein** AppArmor-Profil mit. Das bleibt Handarbeit und ist nicht Teil des Patches.
+- Proxmox liefert dafür – anders als für LXC – **kein** AppArmor-Profil mit. Das bleibt Handarbeit und ist nicht Teil des Patches.
 - Selbst mit AppArmor erreicht QEMU nicht ganz Firecrackers seccomp-Niveau (Jailer: ~50 Syscalls, Namespaces, cgroups, chroot + Rust).
-- Unabhängig davon: die kleinere Gerätemenge der microVM verkleinert die Angriffsfläche ohnehin.
+- Unabhängig davon: die kleinere Gerätemenge der microVM verkleinert auch hier die Angriffsfläche.
 
 </div>
 </div>
@@ -282,7 +294,7 @@ Proxmox übersetzt die deklarative Konfigurationsdatei via Perl in den exakten Q
 ```
 
 **Struktur des Aufrufs:**
-1. Proxmox initialisiert standardmäßig eine vollständige **PCIe-Root-Port- und Bridge-Hierarchie**.
+1. Proxmox initialisiert standardmäßig eine vollständige **PCIe-Root-Port- und Bridge-Hierarchie**. (Bei q35)
 2. Alle Geräte (`scsi`, `net`, `balloon`) werden als **PCI-Geräte (`-pci`)** an Slots gehängt.
 3. Als Boot-Mechanismus wird das Standard-BIOS (SeaBIOS/OVMF) vorausgesetzt.
 
